@@ -1,0 +1,12 @@
+name: dmas_braess
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pandas
+  - mesa
+  - seaborn
+  - numpy
+  - jupyter
