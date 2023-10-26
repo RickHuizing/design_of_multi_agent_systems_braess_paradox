@@ -523,6 +523,7 @@ class Bus(mesa.Agent):
         self.in_pos = {"": None}  # {name of road/junction: cell position}
         self.travel_time = 0
         self.selected_route = Gl.R153
+        self.history = []
 
     def move(self) -> None:
         [(name, pos)] = self.in_pos.items()
@@ -538,6 +539,10 @@ class Bus(mesa.Agent):
             if self.travel_time == 0:
                 # waiting in E0, do nothing
                 return
+            self.history.append([self.selected_route, self.travel_time])
+            if len(self.history) > 30:
+                # forget oldest time
+                del self.history[0]
             self.sync_travel_time_to_model()
             self.travel_time = 0
         else:
