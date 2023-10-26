@@ -2,3 +2,4 @@ mesa~=2.1.1
 numpy~=1.26.0
 seaborn~=0.12.2
 jupyter
+pandas

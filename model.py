@@ -248,6 +248,7 @@ class Tasep():
         self.length = L
         self.name = name
         self.pos_start = pos_start
+        self.pos_end = pos_end
         self.verbose = verbose
         self.heading = np.array(pos_end) - np.array(self.pos_start)
         self.cells = [self.default_val()] * self.length
