@@ -3,12 +3,59 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
+legend_labels = {
+    "counter_R14": "Route 14",
+    "counter_R23": "Route 23",
+    "counter_R153": "Route 153",
+    "route_R14": "Route 14",
+    "route_R23": "Route 23",
+    "route_R153": "Route 153",
+    "toll": "Experienced Route 153",
+    "total throughput": "Total throughput",
+    "avg travel time": "Average travel time",
+}
+
+plot_colors = {
+    "Route 14": "#1f77b4",
+    "Route 23": "#ff7f0e",
+    "Route 153": "#2ca02c",
+    "Experienced Route 153": "#9467bd",
+    "Total throughput": "#d62728",
+    "Average travel time": "#d62728",
+}
+
+image_format = "pdf"
+
+
+def format_for_report(fig):
+    fig.tight_layout()
+
+
+def get_palette(df: pd.DataFrame):
+    return [plot_colors[label] for label in df.columns]
+
 
 def plot_travel_times(dataframe: pd.DataFrame, model_name: str):
     """
     plot the average travel times per route per 1000 monte carlo sweeps
     """
-    travel_times = None
+    travel_times = get_average_travel_times(dataframe)
+
+    travel_times.rename(columns=legend_labels, inplace=True)
+
+    fig = plt.figure()
+
+    g = sns.lineplot(data=travel_times, palette=get_palette(travel_times))
+    g.set(title="", ylabel="Travel time", xlabel="Ticks")
+    g.set(ylim=(0, 1000))
+
+    format_for_report(fig)
+    fig.savefig(f"{model_name}_travel_times.{image_format}", format=image_format)
+
+
+def get_average_travel_times(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """ get average travel times based on model stats """
+    toll_column_name = "toll"
     if dataframe.shape[1] == 4:
         # 4-link model
         travel_times = dataframe.iloc[:, 0:2]
@@ -18,7 +65,7 @@ def plot_travel_times(dataframe: pd.DataFrame, model_name: str):
     elif dataframe.shape[1] == 7:
         # 5-link model with toll
         travel_times: pd.DataFrame = dataframe.iloc[:, 0:3]
-        travel_times.insert(3, "toll", dataframe.iloc[:, 6])
+        travel_times.insert(3, toll_column_name, dataframe.iloc[:, 6])
         # raise NotImplementedError("toll not implemented")
     else:
         raise ValueError("dataframe must have 4 to 7 columns")
@@ -26,18 +73,14 @@ def plot_travel_times(dataframe: pd.DataFrame, model_name: str):
     travel_times = travel_times.rolling(1000).mean()
     travel_times = travel_times[::1000]
 
-    avg_travel_times = travel_times.mean(axis=1)
-    travel_times["avg travel time"] = avg_travel_times
+    avg_travel_times = travel_times.filter(regex=f"[^{toll_column_name}]").mean(axis=1)
 
-    fig = plt.figure()
-    g = sns.lineplot(data=travel_times)
-    g.set(title="", ylabel="travel time", xlabel="ticks")
-    g.set(ylim=(0, 1000))
-
-    fig.savefig(f"{model_name}_travel_times.svg", format="svg")
+    # travel_times["avg travel time"] = avg_travel_times
+    return travel_times
 
 
 def final_average_travel_times(histories):
+    """ get average travel times based on agent histories """
     # assert one history per agent
     assert len(histories) == 248
     # assert each agent has a history of 30 steps
@@ -61,7 +104,22 @@ def plot_throughput(dataframe: pd.DataFrame, model_name: str):
     """
     Plot the average throughput of the network per route per 1000 ticks
     """
-    throughput: pd.DataFrame | None = None
+    throughput = get_average_throughput(dataframe)
+    throughput.rename(columns=legend_labels, inplace=True)
+
+    fig = plt.figure()
+    g = sns.lineplot(data=throughput, palette=get_palette(throughput))
+    g.set(title="", ylabel="Throughput", xlabel="1000 ticks")
+    g.set(ylim=(0, 550))
+
+    format_for_report(fig)
+    fig.savefig(f"{model_name}_throughput.{image_format}", format=image_format)
+
+    return throughput
+
+
+def get_average_throughput(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """ get average throughput based on model stats """
     if dataframe.shape[1] == 4:
         # 4-link model
         throughput = dataframe.iloc[:, 2:4]
@@ -94,13 +152,6 @@ def plot_throughput(dataframe: pd.DataFrame, model_name: str):
 
     # drop the first 2 rows, as these are NaN because of the rolling mean
     throughput = throughput[2:]
-
-    fig = plt.figure()
-    g = sns.lineplot(data=throughput)
-    g.set(title="", ylabel="throughput", xlabel="1000 ticks")
-    g.set(ylim=(0, 550))
-
-    fig.savefig(f"{model_name}_throughput.svg", format="svg")
 
     return throughput
 
@@ -144,12 +195,16 @@ def create_latex_table(model_histories, model_names, toll=-1):
                 routes[route].append(time)
         model_routes.append(routes)
 
+    table_string = ""
+    def print_to_table(string):
+        nonlocal table_string
+        table_string += string + "\n"
     column_widths = [10, 7, 7]
     # print dummy latex table header
     fake_header = f"{'':{column_widths[0]}}"
     for model_name in model_names:
         fake_header += f"&{model_name:^{sum(column_widths[1:3]) + 1}}"
-    print(fake_header)
+    print_to_table(fake_header)
 
     # for each route, print a line in the latex table
     # for each model, print the mean route time and route share
@@ -170,7 +225,7 @@ def create_latex_table(model_histories, model_names, toll=-1):
                 route_latex_table_line += f" -  &   -   "
 
         route_latex_table_line += " \\\\"
-        print(route_latex_table_line)
+        print_to_table(route_latex_table_line)
 
     # for each model, find total average travel time
     average_travel_times_latex_table_line = "Average Travel &&&&&&&&&&\\\nTime Per Agent"
@@ -182,5 +237,47 @@ def create_latex_table(model_histories, model_names, toll=-1):
         average_travel_times_latex_table_line += f"& \\multicolumn{{2}}{{c|}}{{{mean_tt}}}"
         average_travel_times_readable_table_line += f"&{mean_tt:^{sum(column_widths[1:3]) + 1}}"
     average_travel_times_latex_table_line += " \\\\"
-    # print(average_travel_times_latex_table_line)
-    print(average_travel_times_readable_table_line)
+    # print_to_table(average_travel_times_latex_table_line)
+    print_to_table(average_travel_times_readable_table_line)
+
+
+    print(table_string)
+    with open("table.txt", "a") as f:
+        f.write(table_string)
+        f.write("\n\n\n")
+
+
+def plot_experiment_results(experiment_data, folder_name):
+    experiment_to_final_travel_time = {}
+    experiment_to_final_throughput = {}
+
+    experiment_type = "unknown experiment type"  # toll / bus
+    for model_name, experiment_results in experiment_data.items():
+        model_results, model_histories = experiment_results
+        final_travel_times = get_average_travel_times(model_results).iloc[-1]
+        final_throughput = get_average_throughput(model_results).iloc[-1]
+
+        model_variable_value = model_name.split("=")[-1]
+        experiment_type = model_name.split("=")[0]
+        experiment_to_final_travel_time[model_variable_value] = final_travel_times
+        experiment_to_final_throughput[model_variable_value] = final_throughput
+
+    def plot(experiment_to_variable: dict, variable_name: str):
+        df = pd.DataFrame.from_dict(experiment_to_variable, orient="index")
+
+        df.rename(columns=legend_labels, inplace=True)
+
+        fig = plt.figure()
+        g = sns.lineplot(data=df, palette=get_palette(df))
+        g.set(title="", ylabel=variable_name.capitalize(), xlabel=experiment_type.capitalize())
+        if variable_name == "travel time":
+            g.set(ylim=(0, 1000))
+
+        elif variable_name == "throughput":
+            g.set(ylim=(0, 550))
+
+        format_for_report(fig)
+        fig.savefig(f"{experiment_type}_to_{variable_name}.{image_format}", format=image_format)
+
+    plot(experiment_to_final_travel_time, "travel time")
+    plot(experiment_to_final_throughput, "throughput")

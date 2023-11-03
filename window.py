@@ -44,7 +44,7 @@ def example_app(window):
 
     canvas = tk.Canvas()
 
-    canvas.configure(border=2, relief="sunken", width=400, height=400, bg="white")
+    canvas.configure(border=2, relief="sunken", width=400, height=1000, bg="white")
     canvas.create_rectangle(10, 10, 20, 20, fill="black")
     canvas.pack()
 

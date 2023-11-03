@@ -118,8 +118,7 @@ class Car(mesa.Agent):
             return
         else:
             # switch route, 5link
-            route_index = np.argmin([self.expected_travel_R14, self.expected_travel_R23,
-                                     self.expected_travel_R153])
+            route_index = np.argmin([self.expected_travel_R14, self.expected_travel_R23, self.expected_travel_R153])
             self.selected_route = self.model.possible_routes()[route_index]
 
     def strat_maybe_change_route(self, is4link) -> None:
@@ -130,6 +129,10 @@ class Car(mesa.Agent):
         # 4link
         if self.get_structure_name() is Gl.J1 and is4link:
             self.strat_maybe_change_route_4link()
+
+        if self.model.possible_routes() == Gl.ROUTES_4LINK:
+            return
+
         # 5link
         # see "Bittihn, 2018" apendix pseudocode
         elif self.get_structure_name() is Gl.J2:
