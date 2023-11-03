@@ -18,6 +18,7 @@ def main():
     # initialise canvas for drawing
     canvas = tk.Canvas()
     canvas.configure(border=1, width=550, height=900, bg="white")
+    canvas_scale = 1.5
 
     def draw():
         junctions = [Gl.J1, Gl.J2, Gl.J3, Gl.J4]
@@ -75,8 +76,28 @@ def main():
                     else:
                         if switch == 0:
                             canvas.create_rectangle(x1, y1, x2, y2, fill="black")
+        canvas.scale("all", 0, 0, canvas_scale, canvas_scale)
 
-    run_button = tk.Button(text="Run")
+    # frame for input objects
+    input_frame = tk.Frame(window)
+    input_frame.configure(border=2, width=550, height=100)
+    input_frame.pack()
+
+    step_button = tk.Button(input_frame, text="Step")
+    step_button.grid(row=0, column=1, padx=10, pady=10)
+    step_button.configure(command=lambda: step())
+
+    def step():
+        model.step()
+
+        canvas.delete("all")
+        draw()
+
+    # while run run_model() else toggle stop
+    run_button = tk.Button(input_frame, text="Run")
+    run_button.grid(row=0, column=0, padx=10, pady=10)
+
+    run_button.configure(command=lambda: start())
     run = True
 
     def stop():
@@ -92,12 +113,21 @@ def main():
 
     def run_model():
         if run:
-            model.step()
-
-            canvas.delete("all")
-            draw()
+            step()
 
             window.after(15, run_model)
+
+    # run for x steps
+    run_steps_label = tk.Label(input_frame, text="Steps:")
+    run_steps_label.grid(row=1, column=0, padx=10, pady=10)
+
+    run_steps_entry = tk.Entry(input_frame)
+    run_steps_entry.grid(row=1, column=1, padx=10, pady=10)
+    run_steps_entry.insert(0, "1000")
+
+    run_steps_button = tk.Button(input_frame, text="Run")
+    run_steps_button.grid(row=1, column=2, padx=10, pady=10)
+    run_steps_button.configure(command=lambda: run_steps(int(run_steps_entry.get())))
 
     def run_steps(steps):
         for _ in range(steps):
@@ -105,15 +135,15 @@ def main():
         canvas.delete("all")
         draw()
 
-    run_button.configure(command=start)
-    run_button.pack()
-
-    for x in [1000, 10_000, 25_000, 100_000, 200_000]:
-        button = tk.Button(text=f"Run {x} steps", command=lambda s=x: run_steps(s))
-        button.pack()
-
     draw()
+
     canvas.pack()
+
+    # scale canvas
+    window.update()
+    canvas.configure(width=canvas.winfo_reqwidth() * canvas_scale, height=canvas.winfo_reqheight() * canvas_scale)
+    # get preferred canvas width and height
+
 
     window.mainloop()
 
