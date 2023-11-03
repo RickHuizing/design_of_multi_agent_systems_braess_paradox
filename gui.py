@@ -1,24 +1,34 @@
 import tkinter as tk
 from globals import Gl
 import window as W
-from model import Model_4link, Model_5link
+from model import Model_4link, Model_5link, Model_5link_with_bus, Model_5link_toll
 
 NUMBER_OF_AGENTS = 248
 PARTICLE_SIZE = 4
 
 
 def main():
+    # ~~~ USER EDITABLE PARAMETERS ~~~
+    # NOTE THAT RESIZING THE WINDOW MIGHT ENABLE BUTTON PRESSES IF IT WASN'T WORKING ON START-UP
+    # initialise model
+    # possible models: Model_4link, Model_5link, Model_5link_with_bus(n_car, n_bus), Model_5link_toll(n_car, toll)
+    model = Model_4link(NUMBER_OF_AGENTS)
+    # model = Model_5link(NUMBER_OF_AGENTS)
+    # model = Model_5link_with_bus(NUMBER_OF_AGENTS-49, 49)
+    # model = Model_5link_toll(NUMBER_OF_AGENTS, 200)
+    model.initialize_agents_positions()
+
+    # change scale if you want to zoom in/out
+    canvas_scale = 1.5
+
+    # ~~~ END OF USER EDITABLE PARAMETERS ~~~
+
     # initialise main window (remembers size and location)
     window = W.create_window()
-
-    # initialise model
-    model = Model_5link(NUMBER_OF_AGENTS)
-    model.initialize_agents_positions()
 
     # initialise canvas for drawing
     canvas = tk.Canvas()
     canvas.configure(border=1, width=550, height=900, bg="white")
-    canvas_scale = 1.5
 
     def draw():
         junctions = [Gl.J1, Gl.J2, Gl.J3, Gl.J4]
@@ -143,7 +153,6 @@ def main():
     window.update()
     canvas.configure(width=canvas.winfo_reqwidth() * canvas_scale, height=canvas.winfo_reqheight() * canvas_scale)
     # get preferred canvas width and height
-
 
     window.mainloop()
 
